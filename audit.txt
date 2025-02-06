@@ -1,0 +1,21 @@
+Audit de la v1 :
+
+Problèmes :
+
+- pas de protéctions contre les attaques de type injections SQL.
+- manque de validation sur les champs.
+- manque d'optimisation dans la structure des routes
+- données de connexion à la base de données en dur
+- connexion à la base qui reste ouverte après l'éxecution de la requête
+- gestion inefficace des vérifications métier (gestion du stock, des produits...)
+
+Manque de sécurité ainsi que perte en efficacité et performance pouvant handicaper fortement le développement de l'entreprise au sein du marché et causer d'énormes pertes financières.
+
+Solutions :
+
+- gérer les routes relatives aux tables dans leurs fichiers respectifs.
+- gérer les injections SQL, en préparant les requêtes, en vérifiant l'entrée utilisateur (caractères spéciaux), en limitant les privilèges ou en utilisant un ORM.
+- utiliser un fichier .env afin de ne pas mettre les données en dur.
+- fermer la connexion à la base après l'execution d'une requête.
+- utilisation de procédures stockée afin d'améliorer la sécurité et l'efficacité
+- Vérifications métier (gestion du stock, des produits...)
