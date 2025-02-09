@@ -1,5 +1,13 @@
 # Ikk_JecCont
 
+installation :
+
+utiliser la commande npm install dans le dossier du projet après l'avoir cloné depuis son dépot
+
+Audit :
+
+j'ai oublié qu'il fallait faire un commit pour l'audit, il est donc disponible dans la v1 ainsi que la v2
+
 v1 :
 
 bdd :
@@ -144,3 +152,92 @@ INSERT INTO fournir (id_fournisseur_fournir, id_produit_fournir, qt_fournit) VAL
 (3, 8, 220),
 (4, 9, 130),
 (5, 10, 300);
+
+Procédure :
+
+DELIMITER $$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `AjouterLigneCommande`(
+    IN p_id_produit INT,
+    IN p_id_commande INT,
+    IN p_qt_commandes INT,
+    IN p_prix_applique DOUBLE
+)
+BEGIN
+    DECLARE stock_disponible INT;
+    DECLARE total_qt_commandes INT DEFAULT 0;
+
+    -- Vérifier si le produit existe et récupérer son stock actuel
+    SELECT qt_stock INTO stock_disponible
+    FROM produits 
+    WHERE id_produit = p_id_produit;
+
+    -- Si le produit n'existe pas, lever une erreur
+    IF stock_disponible IS NULL THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Produit introuvable';
+    END IF;
+
+    -- Récupérer la quantité totale déjà commandée pour ce produit
+    SELECT IFNULL(SUM(qt_commandes), 0) INTO total_qt_commandes
+    FROM ligne_commande
+    WHERE id_produit = p_id_produit;
+
+    -- Vérifier si l'ajout dépasse le stock disponible
+    IF (total_qt_commandes + p_qt_commandes) > stock_disponible THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Stock insuffisant pour ce produit';
+    ELSE
+        -- Insérer la nouvelle ligne de commande
+        INSERT INTO ligne_commande (id_produit, id_commande, qt_commandes, prix_applique)
+        VALUES (p_id_produit, p_id_commande, p_qt_commandes, p_prix_applique);
+    END IF;
+END$$
+DELIMITER ;
+
+
+DELIMITER //
+
+CREATE PROCEDURE AjouterLigneCommande(
+    IN p_id_produit INT,
+    IN p_id_commande INT,
+    IN p_qt_commandes INT,
+    IN p_prix_applique DOUBLE
+)
+BEGIN
+    DECLARE stock_disponible INT;
+
+    -- Vérifier le stock disponible du produit
+    SELECT qt_stock INTO stock_disponible 
+    FROM produits 
+    WHERE id_produit = p_id_produit;
+
+    -- Vérifier si le stock est suffisant
+    IF stock_disponible IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Produit introuvable';
+    ELSEIF stock_disponible < p_qt_commandes THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Stock insuffisant';
+    ELSE
+        -- Insérer la ligne de commande
+        INSERT INTO ligne_commande (id_produit, id_commande, qt_commandes, prix_applique) 
+        VALUES (p_id_produit, p_id_commande, p_qt_commandes, p_prix_applique);
+
+        -- Décrémenter le stock
+        UPDATE produits 
+        SET qt_stock = qt_stock - p_qt_commandes 
+        WHERE id_produit = p_id_produit;
+    END IF;
+END //
+DELIMITER ;
+
+
+Routes:
+
+CRUD de chaque table + lignes par commande + commandes par client + recherches précises pour certaines tables
+
+ex :
+
+http://localhost:3000/api/meti/produit/:id_produit
+http://localhost:3000/api/fournir/
+http://localhost:3000/api/produits/:id
